@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>カテゴリ管理 - ASA</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    
+    <style>
+        .draggable-item { cursor: grab; }
+        .draggable-item:active { cursor: grabbing; }
+        .sortable-ghost { opacity: 0.4; background-color: #f0f0f0; }
+    </style>
+</head>
+<body class="bg-light">
+
+    <div class="container mt-5" style="max-width: 600px;">
+        <div class="card shadow">
+            <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-tags-fill"></i> カテゴリ管理</span>
+                <a href="/" class="btn btn-sm btn-light">トップに戻る</a>
+            </div>
+            <div class="card-body">
+                
+                {% if current_user.is_admin %}
+                <div class="alert alert-info py-2" style="font-size: 0.9rem;">
+                    <i class="bi bi-info-circle"></i> リストをドラッグして並び替えできます（管理者機能）。
+                </div>
+
+                <form action="/categories/add" method="post" class="input-group mb-4">
+                    <input type="text" name="name" class="form-control" placeholder="新しいカテゴリ名" required>
+                    <button type="submit" class="btn btn-success"><i class="bi bi-plus-lg"></i> 追加</button>
+                </form>
+                {% else %}
+                <div class="alert alert-warning py-2" style="font-size: 0.9rem;">
+                    閲覧モードです。カテゴリの追加・削除・並び替えは管理者のみ可能です。
+                </div>
+                {% endif %}
+
+                <ul class="list-group" id="category-list">
+                    {% for category in categories %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center {% if current_user.is_admin %}draggable-item{% endif %}" data-id="{{ category['id'] }}">
+                        <div>
+                            {% if current_user.is_admin %}
+                                <i class="bi bi-grip-vertical text-muted me-2"></i> 
+                            {% else %}
+                                <i class="bi bi-tag-fill text-muted me-2"></i>
+                            {% endif %}
+                            {{ category['name'] }}
+                        </div>
+                        
+                        {% if current_user.is_admin %}
+                        <a href="/categories/delete/{{ category['id'] }}" onclick="return confirm('削除しますか？');" class="btn btn-sm btn-outline-danger border-0">
+                            <i class="bi bi-trash"></i>
+                        </a>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    {% if current_user.is_admin %}
+    <script>
+        var el = document.getElementById('category-list');
+        var sortable = Sortable.create(el, {
+            animation: 150,
+            handle: '.list-group-item',
+            onEnd: function (evt) {
+                var newOrder = sortable.toArray();
+                fetch('/categories/reorder', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ order: newOrder }),
+                })
+                .then(response => response.json())
+                .then(data => { console.log('並び替え完了:', data); })
+                .catch((error) => { console.error('エラー:', error); });
+            }
+        });
+    </script>
+    {% endif %}
+
+</body>
+</html>
