@@ -10,7 +10,7 @@ const Register = () => {
         e.preventDefault();
         setError(null);
 
-        fetch('http://localhost:5000/register', {
+        fetch('https://asa-app-ayato.onrender.com/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(formData)

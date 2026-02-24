@@ -10,7 +10,7 @@ const EditEquipment = ({ currentUser }) => {
 
     useEffect(() => {
         // 現在の備品データを取得
-        fetch(`http://localhost:5000/api/edit/${id}`, { credentials: 'include' })
+        fetch(`https://asa-app-ayato.onrender.com/api/edit/${id}`, { credentials: 'include' })
             .then(res => res.json())
             .then(data => {
                 if (data.item) {
@@ -29,7 +29,7 @@ const EditEquipment = ({ currentUser }) => {
         e.preventDefault();
         const formData = new FormData(e.target);
 
-        fetch(`http://localhost:5000/api/edit/${id}`, {
+        fetch(`https://asa-app-ayato.onrender.com/api/edit/${id}`, {
             method: 'POST',
             credentials: 'include',
             body: formData

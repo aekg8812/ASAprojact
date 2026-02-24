@@ -18,7 +18,7 @@ function App() {
 
   // アプリ起動時に、Flaskに「ログイン状態」を確認しに行く
   useEffect(() => {
-    fetch('http://localhost:5000/auth/me', { credentials: 'include' })
+    fetch('https://asa-app-ayato.onrender.com/auth/me', { credentials: 'include' })
       .then(res => res.json())
       .then(data => {
         if (data.is_authenticated) {

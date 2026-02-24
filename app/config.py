@@ -27,3 +27,6 @@ class Config:
 
     # 管理者リスト
     ADMIN_USERNAMES = ["井手彩翔", "dkawa"]
+
+    SESSION_COOKIE_SAMESITE = 'None'
+    SESSION_COOKIE_SECURE = True

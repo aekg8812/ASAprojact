@@ -10,7 +10,7 @@ const Login = ({ setCurrentUser }) => {
         e.preventDefault();
         setError(null);
 
-        fetch('http://localhost:5000/login', {
+        fetch('https://asa-app-ayato.onrender.com/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',

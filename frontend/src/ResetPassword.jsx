@@ -13,7 +13,7 @@ const ResetPassword = () => {
     const handleCheckUser = (e) => {
         e.preventDefault();
         setError(null);
-        fetch('http://localhost:5000/reset_password', {
+        fetch('https://asa-app-ayato.onrender.com/reset_password', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ step: 'check_user', username: username })
@@ -33,7 +33,7 @@ const ResetPassword = () => {
     const handleReset = (e) => {
         e.preventDefault();
         setError(null);
-        fetch('http://localhost:5000/reset_password', {
+        fetch('https://asa-app-ayato.onrender.com/reset_password', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 

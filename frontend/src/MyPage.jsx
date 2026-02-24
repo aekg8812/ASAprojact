@@ -9,7 +9,7 @@ const MyPage = ({ currentUser, setCurrentUser }) => {
 
     // 🌟 画面が開いた時に Flask ( /api/mypage ) からデータを取ってくる！
     const fetchMyData = () => {
-        fetch('http://localhost:5000/api/mypage', { credentials: 'include' })
+        fetch('https://asa-app-ayato.onrender.com/api/mypage', { credentials: 'include' })
             .then(res => res.json())
             .then(data => {
                 setCurrentItems(data.current_items);
@@ -24,7 +24,7 @@ const MyPage = ({ currentUser, setCurrentUser }) => {
 
     // 🌟 返却処理（トップページと同じ本物の処理）
     const handleReturn = (id) => {
-        fetch(`http://localhost:5000/api/return/${id}`, { method: 'POST', credentials: 'include' })
+        fetch(`https://asa-app-ayato.onrender.com/api/return/${id}`, { method: 'POST', credentials: 'include' })
         .then(res => res.json())
         .then(data => {
             if (data.status === 'success') {
@@ -39,7 +39,7 @@ const MyPage = ({ currentUser, setCurrentUser }) => {
     const handleDeleteAccount = (e) => {
         e.preventDefault();
         if(window.confirm('【警告】\n本当にアカウントを削除しますか？\nこの操作は取り消せません。')){
-            fetch('http://localhost:5000/delete_account', { method: 'POST', credentials: 'include' })
+            fetch('https://asa-app-ayato.onrender.com/delete_account', { method: 'POST', credentials: 'include' })
             .then(res => res.json())
             .then(data => {
                 if (data.status === 'success') {
@@ -56,7 +56,7 @@ const MyPage = ({ currentUser, setCurrentUser }) => {
 
     // 🌟 ログアウト処理（本物）
     const handleLogout = () => {
-        fetch('http://localhost:5000/logout', { method: 'POST', credentials: 'include' })
+        fetch('https://asa-app-ayato.onrender.com/logout', { method: 'POST', credentials: 'include' })
         .then(res => res.json())
         .then(data => {
             if (data.status === 'success') {

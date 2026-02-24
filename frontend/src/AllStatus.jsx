@@ -6,7 +6,7 @@ const AllStatus = ({ currentUser }) => {
     const [allHistory, setAllHistory] = useState([]);
 
     const fetchAllData = () => {
-        fetch('http://localhost:5000/api/all_status', { credentials: 'include' })
+        fetch('https://asa-app-ayato.onrender.com/api/all_status', { credentials: 'include' })
             .then(res => res.json())
             .then(data => {
                 setUsers(data.users);
@@ -21,7 +21,7 @@ const AllStatus = ({ currentUser }) => {
 
     const handleDeleteUser = (userId) => {
         if (window.confirm('【管理者権限】\n本当にこのユーザーを削除しますか？\n（貸出中の備品は強制返却されます）')) {
-            fetch(`http://localhost:5000/api/delete_user/${userId}`, { method: 'POST', credentials: 'include' })
+            fetch(`https://asa-app-ayato.onrender.com/api/delete_user/${userId}`, { method: 'POST', credentials: 'include' })
             .then(res => res.json())
             .then(data => {
                 alert(data.message);

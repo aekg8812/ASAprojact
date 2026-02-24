@@ -12,7 +12,11 @@ def create_app():
     app.config.from_object(Config)
 
     # 👇 2. これを追加！（Reactからのアクセスと、ログイン情報のやり取りを許可）
-    CORS(app, supports_credentials=True, origins=["http://localhost:5173", "http://127.0.0.1:5173"])
+    CORS(app, resources={r"/*": {"origins": [
+        "http://localhost:5173", 
+        "http://127.0.0.1:5173",
+        "https://campkit-frontend.onrender.com"
+    ]}}, supports_credentials=True)
 
     # Cloudinary設定
     cloudinary.config(

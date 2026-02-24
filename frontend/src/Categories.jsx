@@ -8,7 +8,7 @@ const Categories = ({ currentUser }) => {
     const listRef = useRef(null);
 
     const fetchCategories = () => {
-        fetch('http://localhost:5000/api/categories', { credentials: 'include' })
+        fetch('https://asa-app-ayato.onrender.com/api/categories', { credentials: 'include' })
             .then(res => res.json())
             .then(data => setCategories(data.categories))
             .catch(err => console.error("取得エラー:", err));
@@ -27,7 +27,7 @@ const Categories = ({ currentUser }) => {
                 ghostClass: 'sortable-ghost',
                 onEnd: () => {
                     const newOrder = Array.from(listRef.current.children).map(li => parseInt(li.dataset.id));
-                    fetch('http://localhost:5000/api/categories/reorder', {
+                    fetch('https://asa-app-ayato.onrender.com/api/categories/reorder', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         credentials: 'include',
@@ -41,7 +41,7 @@ const Categories = ({ currentUser }) => {
 
     const handleAddCategory = (e) => {
         e.preventDefault();
-        fetch('http://localhost:5000/api/categories/add', {
+        fetch('https://asa-app-ayato.onrender.com/api/categories/add', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
@@ -60,7 +60,7 @@ const Categories = ({ currentUser }) => {
 
     const handleDelete = (id) => {
         if (window.confirm('削除しますか？')) {
-            fetch(`http://localhost:5000/api/categories/delete/${id}`, { method: 'POST', credentials: 'include' })
+            fetch(`https://asa-app-ayato.onrender.com/api/categories/delete/${id}`, { method: 'POST', credentials: 'include' })
             .then(() => fetchCategories());
         }
     };

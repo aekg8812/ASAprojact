@@ -8,7 +8,7 @@ const Dashboard = ({ currentUser, setCurrentUser }) => {
     const navigate = useNavigate();
 
     const fetchItems = () => {
-        fetch('http://localhost:5000/api/equipment', { credentials: 'include' })
+        fetch('https://asa-app-ayato.onrender.com/api/equipment', { credentials: 'include' })
             .then(res => res.json())
             .then(data => {
                 setItems(data.items);
@@ -22,7 +22,7 @@ const Dashboard = ({ currentUser, setCurrentUser }) => {
     }, []);
 
     const handleLogout = () => {
-        fetch('http://localhost:5000/logout', { method: 'POST', credentials: 'include' })
+        fetch('https://asa-app-ayato.onrender.com/logout', { method: 'POST', credentials: 'include' })
         .then(res => res.json())
         .then(data => {
             if (data.status === 'success') {
@@ -33,7 +33,7 @@ const Dashboard = ({ currentUser, setCurrentUser }) => {
     };
 
     const handleBorrow = (id) => {
-        fetch(`http://localhost:5000/api/borrow/${id}`, { method: 'POST', credentials: 'include' })
+        fetch(`https://asa-app-ayato.onrender.com/api/borrow/${id}`, { method: 'POST', credentials: 'include' })
         .then(res => res.json())
         .then(data => {
             if (data.status === 'success') {
@@ -45,7 +45,7 @@ const Dashboard = ({ currentUser, setCurrentUser }) => {
     };
 
     const handleReturn = (id) => {
-        fetch(`http://localhost:5000/api/return/${id}`, { method: 'POST', credentials: 'include' })
+        fetch(`https://asa-app-ayato.onrender.com/api/return/${id}`, { method: 'POST', credentials: 'include' })
         .then(res => res.json())
         .then(data => {
             if (data.status === 'success') {
@@ -58,7 +58,7 @@ const Dashboard = ({ currentUser, setCurrentUser }) => {
 
     const handleDelete = (id) => {
         if(window.confirm('本当に削除しますか？')) {
-            fetch(`http://localhost:5000/api/delete/${id}`, { method: 'POST', credentials: 'include' })
+            fetch(`https://asa-app-ayato.onrender.com/api/delete/${id}`, { method: 'POST', credentials: 'include' })
             .then(res => res.json())
             .then(data => {
                 if (data.status === 'success') {
@@ -74,7 +74,7 @@ const Dashboard = ({ currentUser, setCurrentUser }) => {
         e.preventDefault();
         const formData = new FormData(e.target); 
 
-        fetch('http://localhost:5000/api/add', {
+        fetch('https://asa-app-ayato.onrender.com/api/add', {
             method: 'POST',
             credentials: 'include',
             body: formData
