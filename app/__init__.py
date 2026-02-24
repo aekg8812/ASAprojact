@@ -1,6 +1,7 @@
 import os
 import cloudinary
 from flask import Flask
+from flask_cors import CORS  # 👈 1. これを追加！
 from flask_login import LoginManager
 from .config import Config
 from .db import init_db, close_db, get_db_connection
@@ -9,6 +10,9 @@ from .models import User
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
+
+    # 👇 2. これを追加！（Reactからのアクセスと、ログイン情報のやり取りを許可）
+    CORS(app, supports_credentials=True, origins=["http://localhost:5173", "http://127.0.0.1:5173"])
 
     # Cloudinary設定
     cloudinary.config(
