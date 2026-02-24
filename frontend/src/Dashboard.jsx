@@ -4,10 +4,15 @@ import { Link, useNavigate } from 'react-router-dom';
 const Dashboard = ({ currentUser, setCurrentUser }) => {
     const [categories, setCategories] = useState([]);
     const [items, setItems] = useState([]);
+    
+    // 🌟 検索と絞り込み用の状態（新しく追加！）
     const [searchQuery, setSearchQuery] = useState("");
+    const [activeCategory, setActiveCategory] = useState("全て"); 
+    
     const navigate = useNavigate();
 
     const fetchItems = () => {
+        // 本番環境のURL（もしローカル環境でテストする場合は localhost:5000 に戻してください）
         fetch('https://asa-app-ayato.onrender.com/api/equipment', { credentials: 'include' })
             .then(res => res.json())
             .then(data => {
@@ -36,11 +41,8 @@ const Dashboard = ({ currentUser, setCurrentUser }) => {
         fetch(`https://asa-app-ayato.onrender.com/api/borrow/${id}`, { method: 'POST', credentials: 'include' })
         .then(res => res.json())
         .then(data => {
-            if (data.status === 'success') {
-                fetchItems();
-            } else {
-                alert(data.message);
-            }
+            if (data.status === 'success') fetchItems();
+            else alert(data.message);
         });
     };
 
@@ -48,11 +50,8 @@ const Dashboard = ({ currentUser, setCurrentUser }) => {
         fetch(`https://asa-app-ayato.onrender.com/api/return/${id}`, { method: 'POST', credentials: 'include' })
         .then(res => res.json())
         .then(data => {
-            if (data.status === 'success') {
-                fetchItems();
-            } else {
-                alert(data.message);
-            }
+            if (data.status === 'success') fetchItems();
+            else alert(data.message);
         });
     };
 
@@ -61,11 +60,8 @@ const Dashboard = ({ currentUser, setCurrentUser }) => {
             fetch(`https://asa-app-ayato.onrender.com/api/delete/${id}`, { method: 'POST', credentials: 'include' })
             .then(res => res.json())
             .then(data => {
-                if (data.status === 'success') {
-                    fetchItems();
-                } else {
-                    alert(data.message);
-                }
+                if (data.status === 'success') fetchItems();
+                else alert(data.message);
             });
         }
     };
@@ -92,13 +88,23 @@ const Dashboard = ({ currentUser, setCurrentUser }) => {
         .catch(err => alert("追加エラーが発生しました"));
     };
 
+    // 🌟 【爆速検索のコアロジック】
+    // items（全データ）の中から、条件に合うものだけを filteredItems として抽出する
+    const filteredItems = items.filter(item => {
+        // 1. カテゴリが一致しているか（「全て」なら無条件でOK）
+        const matchCategory = activeCategory === "全て" || item.category === activeCategory;
+        // 2. 検索文字が含まれているか（大文字・小文字を区別しない）
+        const matchSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        return matchCategory && matchSearch; // 両方の条件を満たすものだけ残す！
+    });
+
     return (
         <div className="bg-light min-vh-100 pb-5">
             <style>{`.thumbnail { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; }`}</style>
 
             <nav className="navbar navbar-dark bg-dark mb-4">
                 <div className="container">
-                    {/* 👇 ここが「CampKit 備品管理」に変わりました！ */}
                     <span className="navbar-brand mb-0 h1"><i className="bi bi-tree-fill"></i> CampKit 備品管理</span>
                     <div className="d-flex align-items-center gap-2">
                         {currentUser.is_authenticated ? (
@@ -120,21 +126,39 @@ const Dashboard = ({ currentUser, setCurrentUser }) => {
             </nav>
 
             <div className="container">
+                {/* 検索バー */}
                 <div className="row mb-3">
                     <div className="col-md-6">
-                        <form className="d-flex gap-2" onSubmit={(e) => { e.preventDefault(); alert('検索機能は後ほど実装します！'); }}>
-                            <input type="text" className="form-control" placeholder="備品名で検索..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-                            <button type="submit" className="btn btn-primary"><i className="bi bi-search"></i> 検索</button>
+                        <form className="d-flex gap-2" onSubmit={(e) => e.preventDefault()}>
+                            <input 
+                                type="text" 
+                                className="form-control" 
+                                placeholder="備品名で検索..." 
+                                value={searchQuery} 
+                                onChange={(e) => setSearchQuery(e.target.value)} // 文字を打つたびに一瞬で絞り込まれる！
+                            />
+                            {/* 「検索」ボタンを押さなくても絞り込まれますが、UXのために残しています */}
+                            <button type="button" className="btn btn-primary"><i className="bi bi-search"></i> 検索</button>
                             <button type="button" className="btn btn-outline-secondary" onClick={() => setSearchQuery("")}>クリア</button>
                         </form>
                     </div>
                 </div>
 
+                {/* カテゴリ絞り込みボタン */}
                 <div className="mb-4">
                     <div className="btn-group flex-wrap">
-                        <Link to="/" className="btn btn-outline-dark active">全て</Link>
+                        <button 
+                            onClick={() => setActiveCategory("全て")} 
+                            className={`btn ${activeCategory === "全て" ? "btn-dark" : "btn-outline-dark"}`}>
+                            全て
+                        </button>
                         {categories.map((cat, idx) => (
-                            <Link key={idx} to={`/?category=${cat.name}`} className="btn btn-outline-dark">{cat.name}</Link>
+                            <button 
+                                key={idx} 
+                                onClick={() => setActiveCategory(cat.name)} 
+                                className={`btn ${activeCategory === cat.name ? "btn-dark" : "btn-outline-dark"}`}>
+                                {cat.name}
+                            </button>
                         ))}
                     </div>
                 </div>
@@ -169,8 +193,9 @@ const Dashboard = ({ currentUser, setCurrentUser }) => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {items.length > 0 ? (
-                                    items.map(item => (
+                                {/* 🌟 items ではなく、絞り込み済みの filteredItems を表示する！ */}
+                                {filteredItems.length > 0 ? (
+                                    filteredItems.map(item => (
                                         <tr key={item.id}>
                                             <td>{item.id}</td>
                                             <td>{item.image_filename ? <img src={item.image_filename} className="thumbnail" alt="備品" /> : <span className="text-muted" style={{fontSize: '0.8rem'}}>No Image</span>}</td>
@@ -200,7 +225,7 @@ const Dashboard = ({ currentUser, setCurrentUser }) => {
                                         </tr>
                                     ))
                                 ) : (
-                                    <tr><td colSpan="8" className="text-center py-4">備品データを読み込み中、またはデータがありません...</td></tr>
+                                    <tr><td colSpan="8" className="text-center py-4">該当する備品が見つかりません...</td></tr>
                                 )}
                             </tbody>
                         </table>

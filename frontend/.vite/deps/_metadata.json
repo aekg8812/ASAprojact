@@ -2,7 +2,47 @@
   "hash": "8c6322af",
   "configHash": "da35b1f7",
   "lockfileHash": "54e5afae",
-  "browserHash": "3eb2aa99",
-  "optimized": {},
-  "chunks": {}
+  "browserHash": "410d1f96",
+  "optimized": {
+    "react-dom/client": {
+      "src": "../../node_modules/react-dom/client.js",
+      "file": "react-dom_client.js",
+      "fileHash": "68795456",
+      "needsInterop": true
+    },
+    "react-router-dom": {
+      "src": "../../node_modules/react-router-dom/dist/index.mjs",
+      "file": "react-router-dom.js",
+      "fileHash": "9b86b5c0",
+      "needsInterop": false
+    },
+    "react": {
+      "src": "../../node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "02b92368",
+      "needsInterop": true
+    },
+    "react/jsx-dev-runtime": {
+      "src": "../../node_modules/react/jsx-dev-runtime.js",
+      "file": "react_jsx-dev-runtime.js",
+      "fileHash": "6269a34b",
+      "needsInterop": true
+    },
+    "sortablejs": {
+      "src": "../../node_modules/sortablejs/modular/sortable.esm.js",
+      "file": "sortablejs.js",
+      "fileHash": "822f33c1",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "react-CRcsxt9d": {
+      "file": "react-CRcsxt9d.js",
+      "isDynamicEntry": false
+    },
+    "react-dom-CzxYqxvR": {
+      "file": "react-dom-CzxYqxvR.js",
+      "isDynamicEntry": false
+    }
+  }
 }
