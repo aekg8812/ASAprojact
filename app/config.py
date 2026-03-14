@@ -26,7 +26,7 @@ class Config:
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
     # 管理者リスト
-    ADMIN_USERNAMES = ["井手彩翔", "dkawa"]
+    ADMIN_USERNAMES = ["井手彩翔", "河田俊太朗"]
 
     SESSION_COOKIE_SAMESITE = 'None'
     SESSION_COOKIE_SECURE = True
