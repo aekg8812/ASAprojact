@@ -4,7 +4,7 @@ from flask import Flask
 from flask_cors import CORS  # 👈 1. これを追加！
 from flask_login import LoginManager
 from .config import Config
-from .db import init_db, close_db, get_db_connection
+from .db import init_db, close_db, get_user_by_id
 from .models import User
 
 def create_app():
@@ -34,11 +34,7 @@ def create_app():
 
     @login_manager.user_loader
     def load_user(user_id):
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute('SELECT * FROM users WHERE id = %s', (user_id,))
-        user_data = cur.fetchone()
-        cur.close()
+        user_data = get_user_by_id(user_id)
         if user_data:
             is_admin = user_data.get('is_admin', False)
             return User(user_data['id'], user_data['username'], user_data['password_hash'], is_admin)
@@ -48,13 +44,8 @@ def create_app():
     app.teardown_appcontext(close_db)
 
     # Blueprintsの登録
-    from .blueprints.auth import auth_bp
-    from .blueprints.equipment import equipment_bp
-    from .blueprints.admin import admin_bp
-
-    app.register_blueprint(auth_bp)
-    app.register_blueprint(equipment_bp)
-    app.register_blueprint(admin_bp)
+    from .blueprints import register_blueprints
+    register_blueprints(app)
 
     # DB初期化（テーブル作成）
     try:

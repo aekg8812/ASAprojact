@@ -1,7 +1,15 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
-from app.db import get_db_connection
+from app.db import (
+    get_db_connection, get_all_equipment, get_all_categories, 
+    get_equipment_by_id, get_user_borrowed_equipment, get_user_history
+)
 from app.utils import admin_required
+from app.constants import (
+    EQUIPMENT_STATUS_AVAILABLE, EQUIPMENT_STATUS_BORROWED,
+    ERROR_MESSAGES, SUCCESS_MESSAGES,
+    HTTP_OK, HTTP_BAD_REQUEST, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
+)
 import datetime
 import cloudinary.uploader
 import psycopg2
@@ -10,43 +18,29 @@ equipment_bp = Blueprint('equipment', __name__)
 
 @equipment_bp.route('/api/equipment', methods=['GET'])
 def index():
-    conn = get_db_connection()
-    cur = conn.cursor()
+    """全備品を取得（検索・カテゴリフィルタ対応）"""
     search_query = request.args.get('q')
     category_filter = request.args.get('category')
     
-    if search_query:
-        cur.execute('SELECT * FROM equipment WHERE name LIKE %s ORDER BY id', ('%' + search_query + '%',))
-    elif category_filter:
-        cur.execute('SELECT * FROM equipment WHERE category = %s ORDER BY id', (category_filter,))
-    else:
-        cur.execute('SELECT * FROM equipment ORDER BY id')
-    items = [dict(row) for row in cur.fetchall()]
-
-    cur.execute('SELECT * FROM categories ORDER BY display_order')
-    categories = [dict(row) for row in cur.fetchall()]
-    cur.close()
+    items = get_all_equipment(search_query=search_query, category_filter=category_filter)
+    categories = get_all_categories()
     
-    return jsonify({'items': items, 'categories': categories})
+    return jsonify({'items': items, 'categories': categories}), HTTP_OK
 
 @equipment_bp.route('/api/mypage', methods=['GET'])
 @login_required
 def mypage():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute('SELECT * FROM equipment WHERE borrower = %s', (current_user.username,))
-    current_items = [dict(row) for row in cur.fetchall()]
+    """ユーザーが借りてる備品と履歴を取得"""
+    current_items = get_user_borrowed_equipment(current_user.username)
+    history_items = get_user_history(current_user.id)
     
-    cur.execute('SELECT * FROM history WHERE user_id = %s ORDER BY id DESC', (current_user.id,))
-    history_items = [dict(row) for row in cur.fetchall()]
-    cur.close()
-    
-    return jsonify({'current_items': current_items, 'history_items': history_items})
+    return jsonify({'current_items': current_items, 'history_items': history_items}), HTTP_OK
 
 @equipment_bp.route('/api/add', methods=['POST'])
 @login_required
 @admin_required
 def add_item():
+    """新規備品を追加（管理者のみ）"""
     try:
         # 写真アップロードを含むため request.form を使用
         id_val = request.form['id']
@@ -61,42 +55,55 @@ def add_item():
                 image_url = upload_result['secure_url']
         
         conn = get_db_connection()
+        if not conn:
+            return jsonify({'status': 'error', 'message': 'DB接続エラー'}), HTTP_SERVER_ERROR
+        
         cur = conn.cursor()
-        cur.execute('INSERT INTO equipment (id, name, category, status, borrower, image_filename) VALUES (%s, %s, %s, %s, %s, %s)',
-                     (id_val, name, category, '在庫あり', '', image_url))
-        conn.commit()
-        cur.close()
-        return jsonify({'status': 'success', 'message': f'備品「{name}」を追加しました。'})
-    except psycopg2.IntegrityError:
-        return jsonify({'status': 'error', 'message': f"ID {id_val} は既に存在するため登録できません。"}), 400
+        try:
+            cur.execute(
+                'INSERT INTO equipment (id, name, category, status, borrower, image_filename) VALUES (%s, %s, %s, %s, %s, %s)',
+                (id_val, name, category, EQUIPMENT_STATUS_AVAILABLE, '', image_url)
+            )
+            conn.commit()
+            return jsonify({
+                'status': 'success', 
+                'message': SUCCESS_MESSAGES['item_added'].format(name=name)
+            }), HTTP_OK
+        except psycopg2.IntegrityError:
+            conn.rollback()
+            return jsonify({
+                'status': 'error', 
+                'message': f"ID {id_val} {ERROR_MESSAGES['id_already_exists']}"
+            }), HTTP_BAD_REQUEST
+        finally:
+            cur.close()
     except Exception as e:
-        return jsonify({'status': 'error', 'message': f"エラー: {str(e)}"}), 500
+        return jsonify({'status': 'error', 'message': f"エラー: {str(e)}"}), HTTP_SERVER_ERROR
 
 @equipment_bp.route('/api/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
 @admin_required
 def edit_item(id):
+    """備品情報を編集（管理者のみ）"""
     conn = get_db_connection()
-    cur = conn.cursor()
+    if not conn:
+        return jsonify({'status': 'error', 'message': 'DB接続エラー'}), HTTP_SERVER_ERROR
     
-    if request.method == 'GET':
-        cur.execute('SELECT * FROM equipment WHERE id = %s', (id,))
-        item = cur.fetchone()
-        cur.execute('SELECT * FROM categories ORDER BY display_order')
-        categories = cur.fetchall()
-        cur.close()
-        if item:
-            return jsonify({'item': dict(item), 'categories': [dict(row) for row in categories]})
-        return jsonify({'status': 'error', 'message': '見つかりません'}), 404
+    cur = conn.cursor()
+    try:
+        if request.method == 'GET':
+            item = get_equipment_by_id(id)
+            categories = get_all_categories()
+            if item:
+                return jsonify({'item': item, 'categories': categories}), HTTP_OK
+            return jsonify({'status': 'error', 'message': ERROR_MESSAGES['equipment_not_found']}), HTTP_NOT_FOUND
 
-    if request.method == 'POST':
-        try:
+        if request.method == 'POST':
             new_id = request.form['id']
             name = request.form['name']
             category = request.form['category']
             
-            cur.execute('SELECT image_filename FROM equipment WHERE id = %s', (id,))
-            current_item = cur.fetchone()
+            current_item = get_equipment_by_id(id)
             new_image_url = current_item['image_filename'] if current_item else None
             
             if 'image' in request.files:
@@ -105,67 +112,95 @@ def edit_item(id):
                     upload_result = cloudinary.uploader.upload(file)
                     new_image_url = upload_result['secure_url']
 
-            cur.execute('UPDATE equipment SET id = %s, name = %s, category = %s, image_filename = %s WHERE id = %s', 
-                         (new_id, name, category, new_image_url, id))
+            cur.execute(
+                'UPDATE equipment SET id = %s, name = %s, category = %s, image_filename = %s WHERE id = %s', 
+                (new_id, name, category, new_image_url, id)
+            )
             conn.commit()
-            return jsonify({'status': 'success', 'message': '備品情報を更新しました。'})
-        except psycopg2.IntegrityError:
-            conn.rollback()
-            return jsonify({'status': 'error', 'message': "IDが重複しています"}), 400
-        except Exception as e:
-            conn.rollback()
-            return jsonify({'status': 'error', 'message': f"エラー: {str(e)}"}), 500
-        finally:
-            cur.close()
+            return jsonify({'status': 'success', 'message': SUCCESS_MESSAGES['item_updated']}), HTTP_OK
+    except psycopg2.IntegrityError:
+        conn.rollback()
+        return jsonify({'status': 'error', 'message': ERROR_MESSAGES['duplicate_id']}), HTTP_BAD_REQUEST
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'status': 'error', 'message': f"エラー: {str(e)}"}), HTTP_SERVER_ERROR
+    finally:
+        cur.close()
 
 @equipment_bp.route('/api/borrow/<int:id>', methods=['POST'])
 @login_required
 def borrow_item(id):
+    """備品を借りる"""
     borrower_name = current_user.username
     now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
-    conn = get_db_connection()
-    cur = conn.cursor()
     
-    cur.execute('SELECT status, name FROM equipment WHERE id = %s', (id,))
-    item = cur.fetchone()
-    
-    if not item or item['status'] == '貸出中':
-        cur.close()
-        return jsonify({'status': 'error', 'message': 'タッチの差で貸出中になりました。'}), 400
+    item = get_equipment_by_id(id)
+    if not item or item['status'] == EQUIPMENT_STATUS_BORROWED:
+        return jsonify({'status': 'error', 'message': ERROR_MESSAGES['already_borrowed']}), HTTP_BAD_REQUEST
 
-    cur.execute('UPDATE equipment SET status = %s, borrower = %s WHERE id = %s', ('貸出中', borrower_name, id))
-    cur.execute('INSERT INTO history (user_id, equipment_id, equipment_name, borrow_date, return_date) VALUES (%s, %s, %s, %s, %s)', 
-                 (current_user.id, id, item['name'], now, None))
-    conn.commit()
-    cur.close()
-    return jsonify({'status': 'success', 'message': f'{borrower_name} さんとして借りました！'})
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'status': 'error', 'message': 'DB接続エラー'}), HTTP_SERVER_ERROR
+    
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            'UPDATE equipment SET status = %s, borrower = %s WHERE id = %s', 
+            (EQUIPMENT_STATUS_BORROWED, borrower_name, id)
+        )
+        cur.execute(
+            'INSERT INTO history (user_id, equipment_id, equipment_name, borrow_date, return_date) VALUES (%s, %s, %s, %s, %s)', 
+            (current_user.id, id, item['name'], now, None)
+        )
+        conn.commit()
+        return jsonify({
+            'status': 'success', 
+            'message': SUCCESS_MESSAGES['item_borrowed'].format(borrower=borrower_name)
+        }), HTTP_OK
+    finally:
+        cur.close()
 
 @equipment_bp.route('/api/return/<int:id>', methods=['POST'])
 @login_required
 def return_item(id):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute('SELECT * FROM equipment WHERE id = %s', (id,))
-    item = cur.fetchone()
-    
+    """備品を返却する"""
+    item = get_equipment_by_id(id)
     if not item or item['borrower'] != current_user.username:
-        cur.close()
-        return jsonify({'status': 'error', 'message': '他人が借りている備品を返却することはできません。'}), 400
+        return jsonify({'status': 'error', 'message': ERROR_MESSAGES['not_borrower']}), HTTP_BAD_REQUEST
 
     now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
-    cur.execute('UPDATE equipment SET status = %s, borrower = %s WHERE id = %s', ('在庫あり', '', id))
-    cur.execute('UPDATE history SET return_date = %s WHERE user_id = %s AND equipment_id = %s AND return_date IS NULL', (now, current_user.id, id))
-    conn.commit()
-    cur.close()
-    return jsonify({'status': 'success', 'message': '返却しました！'})
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'status': 'error', 'message': 'DB接続エラー'}), HTTP_SERVER_ERROR
+    
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            'UPDATE equipment SET status = %s, borrower = %s WHERE id = %s', 
+            (EQUIPMENT_STATUS_AVAILABLE, '', id)
+        )
+        cur.execute(
+            'UPDATE history SET return_date = %s WHERE user_id = %s AND equipment_id = %s AND return_date IS NULL', 
+            (now, current_user.id, id)
+        )
+        conn.commit()
+        return jsonify({'status': 'success', 'message': SUCCESS_MESSAGES['item_returned']}), HTTP_OK
+    finally:
+        cur.close()
 
 @equipment_bp.route('/api/delete/<int:id>', methods=['POST'])
 @login_required
 @admin_required
 def delete_item(id):
+    """備品を削除（管理者のみ）"""
     conn = get_db_connection()
+    if not conn:
+        return jsonify({'status': 'error', 'message': 'DB接続エラー'}), HTTP_SERVER_ERROR
+    
     cur = conn.cursor()
-    cur.execute('DELETE FROM equipment WHERE id = %s', (id,))
-    conn.commit()
-    cur.close()
-    return jsonify({'status': 'success', 'message': '備品を削除しました。'})
+    try:
+        cur.execute('DELETE FROM equipment WHERE id = %s', (id,))
+        conn.commit()
+        return jsonify({'status': 'success', 'message': SUCCESS_MESSAGES['item_deleted']}), HTTP_OK
+    finally:
+        cur.close()
