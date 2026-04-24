@@ -11,6 +11,9 @@ import EditEquipment from './EditEquipment';
 import AllStatus from './AllStatus';
 import Categories from './Categories';
 
+// API ユーティリティをインポート
+import { getCurrentUser } from './api';
+
 function App() {
   // 🌟 アプリ全体で共有する「現在のユーザー情報」
   const [currentUser, setCurrentUser] = useState({ is_authenticated: false });
@@ -18,8 +21,7 @@ function App() {
 
   // アプリ起動時に、Flaskに「ログイン状態」を確認しに行く
   useEffect(() => {
-    fetch('https://asa-app-ayato.onrender.com/auth/me', { credentials: 'include' })
-      .then(res => res.json())
+    getCurrentUser()
       .then(data => {
         if (data.is_authenticated) {
           setCurrentUser(data); // ログインしていれば情報をセット
