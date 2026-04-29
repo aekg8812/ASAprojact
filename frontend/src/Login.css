@@ -1,0 +1,37 @@
+/* frontend/src/Login.css */
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh; /* 画面の高さいっぱいに広げる */
+  background-color: #f5f5f5; /* 薄いグレーの背景 */
+}
+
+.login-box {
+  background-color: white;
+  padding: 40px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  width: 100%;
+  max-width: 400px; /* スマホでもPCでも見やすい幅に */
+}
+
+.login-box h1 {
+  margin-top: 0;
+  color: #333;
+  font-size: 24px;
+}
+
+.login-box p {
+  color: #666;
+  margin-bottom: 24px;
+}
+
+.error-message {
+  background-color: #ffebee;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  margin-bottom: 20px;
+}

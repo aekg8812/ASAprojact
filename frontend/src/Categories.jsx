@@ -1,67 +1,74 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import Sortable from 'sortablejs';
+import * as api from './api';
 
 const Categories = ({ currentUser }) => {
     const [categories, setCategories] = useState([]);
     const [newCategoryName, setNewCategoryName] = useState("");
     const listRef = useRef(null);
 
-    const fetchCategories = () => {
-        fetch('https://asa-app-ayato.onrender.com/api/categories', { credentials: 'include' })
-            .then(res => res.json())
-            .then(data => setCategories(data.categories))
-            .catch(err => console.error("取得エラー:", err));
+    const fetchCategories = async () => {
+        try {
+            const data = await api.getCategories();
+            setCategories(data.categories);
+        } catch (err) {
+            console.error("取得エラー:", err);
+        }
     };
 
     useEffect(() => {
         fetchCategories();
     }, []);
 
-    // 🌟 ドラッグ＆ドロップの並び替え処理（本物）
     useEffect(() => {
         if (currentUser?.is_admin && listRef.current && categories.length > 0) {
             const sortable = Sortable.create(listRef.current, {
                 animation: 150,
                 handle: '.list-group-item',
                 ghostClass: 'sortable-ghost',
-                onEnd: () => {
+                onEnd: async () => {
                     const newOrder = Array.from(listRef.current.children).map(li => parseInt(li.dataset.id));
-                    fetch('https://asa-app-ayato.onrender.com/api/categories/reorder', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        credentials: 'include',
-                        body: JSON.stringify({ order: newOrder })
-                    });
+                    try {
+                        await api.reorderCategories(newOrder);
+                    } catch (err) {
+                        console.error("順序更新エラー:", err);
+                    }
                 }
             });
             return () => sortable.destroy();
         }
     }, [currentUser, categories]);
 
-    const handleAddCategory = (e) => {
+    const handleAddCategory = async (e) => {
         e.preventDefault();
-        fetch('https://asa-app-ayato.onrender.com/api/categories/add', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ name: newCategoryName })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if(data.status === 'success') {
+        try {
+            const data = await api.addCategory(newCategoryName);
+            if (data.status === 'success') {
                 setNewCategoryName("");
                 fetchCategories();
             } else {
                 alert(data.message);
             }
-        });
+        } catch (err) {
+            console.error("追加エラー:", err);
+            alert("カテゴリの追加に失敗しました");
+        }
     };
 
-    const handleDelete = (id) => {
+    const handleDelete = async (id) => {
         if (window.confirm('削除しますか？')) {
-            fetch(`https://asa-app-ayato.onrender.com/api/categories/delete/${id}`, { method: 'POST', credentials: 'include' })
-            .then(() => fetchCategories());
+            try {
+                const data = await api.deleteCategory(id);
+                if (data.status === 'success') {
+                    fetchCategories();
+                } else {
+                    alert(data.message);
+                }
+            } catch (err) {
+                console.error("削除エラー:", err);
+                alert("削除に失敗しました");
+            }
         }
     };
 

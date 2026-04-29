@@ -1,81 +1,88 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import liff from '@line/liff';
+import { lineLogin } from './api'; // 先ほど更新したAPI関数
+import './Login.css'; // 必要に応じてスタイルを読み込む
 
-const Login = ({ setCurrentUser }) => {
-    const [formData, setFormData] = useState({ username: '', password: '' });
-    const [error, setError] = useState(null);
-    const navigate = useNavigate();
+const Login = ({ setCurrentUser }) => { 
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [liffError, setLiffError] = useState(null);
+  const navigate = useNavigate();
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        setError(null);
+  useEffect(() => {
+    const initLiff = async () => {
+      try {
+        await liff.init({ liffId: import.meta.env.VITE_LIFF_ID });
+        setIsInitialized(true);
 
-        fetch('https://asa-app-ayato.onrender.com/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify(formData)
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.status === 'success') {
-                setCurrentUser({
-                    is_authenticated: true,
-                    id: data.user.id,
-                    username: data.user.username,
-                    is_admin: data.user.is_admin
-                });
-                navigate('/');
+        if (liff.isLoggedIn()) {
+          const idToken = liff.getIDToken();
+          if (idToken) {
+            const response = await lineLogin(idToken);
+            
+            if (response.status === 'success') {
+              // ✅ 2. ここを追加！ アプリ全体にユーザー情報をセットする
+              setCurrentUser({
+                is_authenticated: true,
+                ...response.user
+              });
+              
+              // ログイン成功したらダッシュボードへ
+              navigate('/');            // ✅ 変更後（App.jsx のパスに合わせる
             } else {
-                setError(data.message || 'ログインに失敗しました');
+              setLiffError(response.message || 'ログインに失敗しました');
             }
-        })
-        .catch(err => {
-            console.error(err);
-            setError('サーバーとの通信に失敗しました。');
-        });
+          }
+        }
+      } catch (error) {
+        console.error('LIFF Initialization failed', error);
+        setLiffError('LIFFの初期化に失敗しました。');
+      }
     };
+    initLiff();
+  }, [navigate, setCurrentUser]); // setCurrentUser を依存関係に追加
 
-    return (
-        <div className="bg-light d-flex align-items-center justify-content-center" style={{ height: '100vh' }}>
-            <div className="card shadow p-4" style={{ width: '400px' }}>
-                {/* 👇 ここが「CampKit ログイン」に変わりました！ */}
-                <h3 className="text-center mb-4">CampKit ログイン</h3>
+  const handleLoginClick = () => {
+    if (!isInitialized) return;
+    
+    // LINEのログイン画面（または認可画面）へリダイレクト
+    if (!liff.isLoggedIn()) {
+      liff.login();
+    }
+  };
 
-                {error && <div className="alert alert-danger">{error}</div>}
+  return (
+    <div className="login-container">
+      <div className="login-box">
+        <h1>ASAproject (CampKit)</h1>
+        <p>備品管理システムへようこそ</p>
 
-                <form onSubmit={handleSubmit}>
-                    <div className="mb-3">
-                        <label className="form-label">ユーザー名</label>
-                        <input 
-                            type="text" 
-                            className="form-control" 
-                            required 
-                            value={formData.username}
-                            onChange={(e) => setFormData({...formData, username: e.target.value})}
-                        />
-                    </div>
-                    <div className="mb-3">
-                        <label className="form-label">パスワード</label>
-                        <input 
-                            type="password" 
-                            className="form-control" 
-                            required 
-                            value={formData.password}
-                            onChange={(e) => setFormData({...formData, password: e.target.value})}
-                        />
-                    </div>
-                    <button type="submit" className="btn btn-success w-100">ログイン</button>
-                </form>
+        {liffError && <p className="error-message" style={{ color: 'red' }}>{liffError}</p>}
 
-                <div className="mt-4 text-center">
-                    <p className="mb-2"><Link to="/reset_password" className="link-secondary">パスワードを忘れた方はこちら</Link></p>
-                    <hr />
-                    <p className="mb-0"><Link to="/register" className="btn btn-outline-primary btn-sm">新規会員登録</Link></p>
-                </div>
-            </div>
-        </div>
-    );
+        {!isInitialized ? (
+          <p>読み込み中...</p>
+        ) : (
+          <button 
+            onClick={handleLoginClick} 
+            style={{
+              backgroundColor: '#06C755', // LINE公式グリーン
+              color: 'white',
+              border: 'none',
+              padding: '12px 24px',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              width: '100%',
+              marginTop: '20px'
+            }}
+          >
+            LINEでログイン
+          </button>
+        )}
+      </div>
+    </div>
+  );
 };
 
 export default Login;

@@ -1,9 +1,13 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import basicSsl from '@vitejs/plugin-basic-ssl' // ✅ SSLプラグインをインポート
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    basicSsl() // ✅ プラグインを追加（これで自動的にhttpsになります）
+  ],
 
   // ✅ ビルド設定
   build: {
@@ -29,4 +33,3 @@ export default defineConfig({
     },
   },
 })
-

@@ -15,7 +15,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 export const apiCall = async (endpoint, options = {}) => {
   // credentials を指定してクッキーベースの認証に対応
   const defaultOptions = {
-    credentials: 'include', // クッキーを含める
+    credentials: 'include', // ★これがFlask-Loginのセッション維持に必須
     headers: {
       'Content-Type': 'application/json',
       ...options.headers,
@@ -52,31 +52,40 @@ export const getCurrentUser = async () => {
 };
 
 /**
- * ログイン
+ * LINEログイン (新規登録 / ログイン兼用)
+ * @param {string} idToken - LIFFから取得したIDトークン
  */
-export const login = async (username, password) => {
-  return await apiCallJson('/login', {
+export const lineLogin = async (idToken) => {
+  return await apiCallJson('/auth/line-login', { // ✅ /auth/ を先頭に付ける
     method: 'POST',
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify({ idToken }),
   });
 };
 
 /**
- * ログアウト
+ * ログアウト ✅ エンドポイント修正
  */
 export const logout = async () => {
-  return await apiCallJson('/logout', {
+  return await apiCallJson('/auth/logout', {
     method: 'POST',
   });
 };
 
 /**
- * ユーザー登録
+ * アカウント削除 ✅ 新規追加
  */
-export const register = async (username, password, confirm_password) => {
-  return await apiCallJson('/register', {
+export const deleteAccount = async () => {
+  return await apiCallJson('/auth/delete_account', {
     method: 'POST',
-    body: JSON.stringify({ username, password, confirm_password }),
+  });
+};
+
+/**
+ * ユーザーを削除（管理者）✅ 新規追加
+ */
+export const deleteUser = async (userId) => {
+  return await apiCallJson(`/api/delete_user/${userId}`, {
+    method: 'POST',
   });
 };
 
@@ -91,6 +100,29 @@ export const getEquipment = async (searchQuery = '', categoryFilter = '') => {
   const queryString = params.toString();
   const url = queryString ? `/api/equipment?${queryString}` : '/api/equipment';
   return await apiCallJson(url);
+};
+
+/**
+ * 備品の編集画面データを取得 ✅ 新規追加
+ */
+export const getEditEquipment = async (equipmentId) => {
+  return await apiCallJson(`/api/edit/${equipmentId}`);
+};
+
+/**
+ * 備品を更新（管理者） ✅ 新規追加
+ */
+export const updateEquipment = async (equipmentId, formData) => {
+  const options = {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+    headers: {},
+  };
+  
+  const url = `${API_BASE_URL}/api/edit/${equipmentId}`;
+  const response = await fetch(url, options);
+  return response.json();
 };
 
 /**
@@ -132,17 +164,79 @@ export const getCategories = async () => {
   return await apiCallJson('/api/categories');
 };
 
+/**
+ * カテゴリを追加（管理者） ✅ 新規追加
+ */
+export const addCategory = async (name) => {
+  return await apiCallJson('/api/categories/add', {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  });
+};
+
+/**
+ * カテゴリを削除（管理者） ✅ 新規追加
+ */
+export const deleteCategory = async (categoryId) => {
+  return await apiCallJson(`/api/categories/delete/${categoryId}`, {
+    method: 'POST',
+  });
+};
+
+/**
+ * カテゴリの順序を変更 ✅ 新規追加
+ */
+export const reorderCategories = async (order) => {
+  return await apiCallJson('/api/categories/reorder', {
+    method: 'POST',
+    body: JSON.stringify({ order }),
+  });
+};
+
+/**
+ * 備品を追加（管理者）✅ 新規追加
+ */
+export const addEquipment = async (formData) => {
+  const options = {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+    headers: {},
+  };
+  
+  const url = `${API_BASE_URL}/api/add`;
+  const response = await fetch(url, options);
+  return response.json();
+};
+
+/**
+ * 備品を削除（管理者）✅ 新規追加
+ */
+export const deleteEquipment = async (equipmentId) => {
+  return await apiCallJson(`/api/delete/${equipmentId}`, {
+    method: 'POST',
+  });
+};
+
 export default {
   apiCall,
   apiCallJson,
   getCurrentUser,
-  login,
+  lineLogin,
   logout,
-  register,
+  deleteAccount,
+  deleteUser,
   getEquipment,
+  getEditEquipment,
+  updateEquipment,
   getMyPage,
   borrowEquipment,
   returnEquipment,
   getAllStatus,
   getCategories,
+  addCategory,
+  deleteCategory,
+  reorderCategories,
+  addEquipment,
+  deleteEquipment,
 };

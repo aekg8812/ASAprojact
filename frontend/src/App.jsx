@@ -1,50 +1,61 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import liff from '@line/liff';
 
-// 各画面の読み込み
+// コンポーネントとAPIの読み込み
 import Dashboard from './Dashboard';
 import Login from './Login';
-import Register from './Register';
-import ResetPassword from './ResetPassword';
 import MyPage from './MyPage';
-import EditEquipment from './EditEquipment';
 import AllStatus from './AllStatus';
 import Categories from './Categories';
-
-// API ユーティリティをインポート
-import { getCurrentUser } from './api';
+import EditEquipment from './EditEquipment';
+import { getCurrentUser, lineLogin } from './api';
 
 function App() {
-  // 🌟 アプリ全体で共有する「現在のユーザー情報」
   const [currentUser, setCurrentUser] = useState({ is_authenticated: false });
   const [loading, setLoading] = useState(true);
 
-  // アプリ起動時に、Flaskに「ログイン状態」を確認しに行く
   useEffect(() => {
-    getCurrentUser()
-      .then(data => {
+    const initApp = async () => {
+      try {
+        // 1. まずは既存のセッション（Cookie）があるか確認
+        const data = await getCurrentUser();
         if (data.is_authenticated) {
-          setCurrentUser(data); // ログインしていれば情報をセット
+          setCurrentUser(data);
+          setLoading(false);
+          return;
         }
+
+        // 2. セッションがなければ LIFF を初期化
+        await liff.init({ liffId: import.meta.env.VITE_LIFF_ID });
+
+        // 3. LINEログイン済み（リダイレクト後）であればバックエンドに通知
+        if (liff.isLoggedIn()) {
+          const idToken = liff.getIDToken();
+          if (idToken) {
+            const loginRes = await lineLogin(idToken);
+            if (loginRes.status === 'success') {
+              setCurrentUser({ is_authenticated: true, ...loginRes.user });
+            }
+          }
+        }
+      } catch (err) {
+        console.error("初期化エラー:", err);
+      } finally {
         setLoading(false);
-      })
-      .catch(err => {
-        console.error("ログイン確認エラー:", err);
-        setLoading(false);
-      });
+      }
+    };
+
+    initApp();
   }, []);
 
-  // 読み込み中の一瞬だけ表示する画面
-  if (loading) return <div className="d-flex justify-content-center mt-5"><div className="spinner-border text-primary"></div></div>;
+  if (loading) return <div className="text-center mt-5"><div className="spinner-border"></div></div>;
 
   return (
     <BrowserRouter>
       <Routes>
-        {/* 各画面に currentUser（ユーザー情報）と setCurrentUser（情報更新スイッチ）を渡す！ */}
         <Route path="/" element={<Dashboard currentUser={currentUser} setCurrentUser={setCurrentUser} />} />
         <Route path="/login" element={<Login setCurrentUser={setCurrentUser} />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/reset_password" element={<ResetPassword />} />
         <Route path="/mypage" element={<MyPage currentUser={currentUser} setCurrentUser={setCurrentUser} />} />
         <Route path="/all_status" element={<AllStatus currentUser={currentUser} />} />
         <Route path="/categories" element={<Categories currentUser={currentUser} />} />

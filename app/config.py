@@ -25,8 +25,8 @@ class Config:
     UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'static/uploads')
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
-    # 管理者リスト
-    ADMIN_USERNAMES = ["井手彩翔", "河田俊太朗"]
+    # 管理者リスト(LINEによる管理方法に変更)
+    #ADMIN_USERNAMES = ["井手彩翔", "河田俊太朗"]
 
     SESSION_COOKIE_SAMESITE = 'None'
     SESSION_COOKIE_SECURE = True

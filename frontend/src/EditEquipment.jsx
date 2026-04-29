@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import * as api from './api';
 
 const EditEquipment = ({ currentUser }) => {
-    const { id } = useParams(); // URLから備品IDを取得
+    const { id } = useParams();
     const navigate = useNavigate();
     const [categories, setCategories] = useState([]);
     const [item, setItem] = useState({ id: '', name: '', category: '', image_filename: null });
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // 現在の備品データを取得
-        fetch(`https://asa-app-ayato.onrender.com/api/edit/${id}`, { credentials: 'include' })
-            .then(res => res.json())
-            .then(data => {
+        const fetchData = async () => {
+            try {
+                const data = await api.getEditEquipment(id);
                 if (data.item) {
                     setItem(data.item);
                     setCategories(data.categories);
@@ -20,29 +20,33 @@ const EditEquipment = ({ currentUser }) => {
                     alert('データが見つかりません');
                     navigate('/');
                 }
+            } catch (err) {
+                console.error("データ取得エラー:", err);
+                alert('データ取得に失敗しました');
+                navigate('/');
+            } finally {
                 setLoading(false);
-            })
-            .catch(err => console.error(err));
+            }
+        };
+        fetchData();
     }, [id, navigate]);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         const formData = new FormData(e.target);
 
-        fetch(`https://asa-app-ayato.onrender.com/api/edit/${id}`, {
-            method: 'POST',
-            credentials: 'include',
-            body: formData
-        })
-        .then(res => res.json())
-        .then(data => {
+        try {
+            const data = await api.updateEquipment(id, formData);
             if (data.status === 'success') {
                 alert(data.message);
                 navigate('/');
             } else {
                 alert(data.message);
             }
-        });
+        } catch (err) {
+            console.error("更新エラー:", err);
+            alert('更新に失敗しました');
+        }
     };
 
     if (loading) return <div className="text-center mt-5">読み込み中...</div>;

@@ -22,6 +22,51 @@ def close_db(e=None):
         except Exception as ex:
             print(f"DB クローズエラー: {ex}")
 
+# app/db.py に追記
+
+# app/db.py
+
+def upsert_line_user(line_id, display_name, picture_url):
+    """
+    LINE IDを基にユーザーを検索し、存在しなければ新規作成、
+    存在すれば名前と画像を更新します。
+    """
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    # ---------------------------------------------------------
+    # 【一時的な措置】LINEの表示名で管理者を判定する
+    # ※実際のLINEの表示名と完全に一致させる必要があります
+    # ---------------------------------------------------------
+    TEMP_ADMIN_NAMES = ["井手彩翔", "河田"] # ← お二人の実際のLINE名に変更してください
+    
+    # 名前がリストにあれば True、なければ False
+    is_temp_admin = display_name in TEMP_ADMIN_NAMES
+
+    # SQL: 新規作成時に is_admin を判定。更新時は既存の権限を奪わないように調整。
+    sql = """
+    INSERT INTO users (username, line_id, picture_url, is_admin)
+    VALUES (%s, %s, %s, %s)
+    ON CONFLICT (line_id) DO UPDATE 
+    SET username = EXCLUDED.username,
+        picture_url = EXCLUDED.picture_url,
+        is_admin = users.is_admin OR EXCLUDED.is_admin
+    RETURNING id, username, line_id, picture_url, is_admin;
+    """
+    
+    try:
+        cur.execute(sql, (display_name, line_id, picture_url, is_temp_admin))
+        user = cur.fetchone()
+        conn.commit()
+        return user
+    except Exception as e:
+        conn.rollback()
+        print(f"Error upserting line user: {e}")
+        return None
+    finally:
+        cur.close()
+
+
 # ========== ユーザー関連 ==========
 def get_user_by_username(username):
     """ユーザー名からユーザー情報を取得"""
@@ -221,10 +266,7 @@ def init_db():
             conn.rollback()
             print(f"カラム追加スキップ: {e}")
 
-        # 管理者権限設定
-        if Config.ADMIN_USERNAMES:
-            for name in Config.ADMIN_USERNAMES:
-                cur.execute("UPDATE users SET is_admin = TRUE WHERE username = %s", (name,))
+       
             conn.commit()
         
         # カテゴリ初期データ

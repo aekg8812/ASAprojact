@@ -11,11 +11,12 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
-    # 👇 2. これを追加！（Reactからのアクセスと、ログイン情報のやり取りを許可）
+  # CORS設定を修正
     CORS(app, resources={r"/*": {"origins": [
-        "http://localhost:5173", 
-        "http://127.0.0.1:5173",
-        "https://campkit-frontend.onrender.com"
+        "https://localhost:5173",    # ✅ 追加：HTTPSのローカル環境を許可
+        "http://localhost:5173",     # (既存)
+        "http://127.0.0.1:5173",    # (既存)
+        "https://campkit-frontend.onrender.com" # (既存)
     ]}}, supports_credentials=True)
 
     # Cloudinary設定

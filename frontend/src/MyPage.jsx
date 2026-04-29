@@ -1,69 +1,67 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import * as api from './api';
 
 const MyPage = ({ currentUser, setCurrentUser }) => {
-    // 👇 本物のデータを入れるための空箱を用意
     const [currentItems, setCurrentItems] = useState([]);
     const [historyItems, setHistoryItems] = useState([]);
     const navigate = useNavigate();
 
-    // 🌟 画面が開いた時に Flask ( /api/mypage ) からデータを取ってくる！
-    const fetchMyData = () => {
-        fetch('https://asa-app-ayato.onrender.com/api/mypage', { credentials: 'include' })
-            .then(res => res.json())
-            .then(data => {
-                setCurrentItems(data.current_items);
-                setHistoryItems(data.history_items);
-            })
-            .catch(err => console.error("データ取得エラー:", err));
+    const fetchMyData = async () => {
+        try {
+            const data = await api.getMyPage();
+            setCurrentItems(data.current_items);
+            setHistoryItems(data.history_items);
+        } catch (err) {
+            console.error("データ取得エラー:", err);
+        }
     };
 
     useEffect(() => {
         fetchMyData();
     }, []);
 
-    // 🌟 返却処理（トップページと同じ本物の処理）
-    const handleReturn = (id) => {
-        fetch(`https://asa-app-ayato.onrender.com/api/return/${id}`, { method: 'POST', credentials: 'include' })
-        .then(res => res.json())
-        .then(data => {
+    const handleReturn = async (id) => {
+        try {
+            const data = await api.returnEquipment(id);
             if (data.status === 'success') {
-                fetchMyData(); // 返却したらマイページのリストを最新に更新！
+                fetchMyData();
             } else {
                 alert(data.message);
             }
-        });
-    };
-
-    // 🌟 アカウント削除処理（本物）
-    const handleDeleteAccount = (e) => {
-        e.preventDefault();
-        if(window.confirm('【警告】\n本当にアカウントを削除しますか？\nこの操作は取り消せません。')){
-            fetch('https://asa-app-ayato.onrender.com/delete_account', { method: 'POST', credentials: 'include' })
-            .then(res => res.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    alert(data.message);
-                    setCurrentUser({ is_authenticated: false }); // 未ログイン状態に戻す
-                    navigate('/'); // トップへ強制移動
-                } else {
-                    alert(data.message); // 「未返却の備品があります」などのエラーを表示
-                }
-            })
-            .catch(err => alert("通信エラーが発生しました"));
+        } catch (err) {
+            console.error("返却エラー:", err);
+            alert("通信エラーが発生しました");
         }
     };
 
-    // 🌟 ログアウト処理（本物）
-    const handleLogout = () => {
-        fetch('https://asa-app-ayato.onrender.com/logout', { method: 'POST', credentials: 'include' })
-        .then(res => res.json())
-        .then(data => {
+    const handleDeleteAccount = async (e) => {
+        e.preventDefault();
+        if (window.confirm('【警告】\n本当にアカウントを削除しますか？\nこの操作は取り消せません。')) {
+            try {
+                const data = await api.deleteAccount();
+                alert(data.message);
+                if (data.status === 'success') {
+                    setCurrentUser({ is_authenticated: false });
+                    navigate('/');
+                }
+            } catch (err) {
+                console.error("削除エラー:", err);
+                alert("通信エラーが発生しました");
+            }
+        }
+    };
+
+    const handleLogout = async () => {
+        try {
+            const data = await api.logout();
             if (data.status === 'success') {
                 setCurrentUser({ is_authenticated: false });
                 navigate('/login');
             }
-        });
+        } catch (err) {
+            console.error("ログアウトエラー:", err);
+        }
     };
 
     return (

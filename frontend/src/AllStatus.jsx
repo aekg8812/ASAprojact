@@ -1,32 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import * as api from './api';
 
 const AllStatus = ({ currentUser }) => {
     const [users, setUsers] = useState([]);
     const [allHistory, setAllHistory] = useState([]);
 
-    const fetchAllData = () => {
-        fetch('https://asa-app-ayato.onrender.com/api/all_status', { credentials: 'include' })
-            .then(res => res.json())
-            .then(data => {
-                setUsers(data.users);
-                setAllHistory(data.all_history);
-            })
-            .catch(err => console.error("データ取得エラー:", err));
+    const fetchAllData = async () => {
+        try {
+            const data = await api.getAllStatus();
+            setUsers(data.users);
+            setAllHistory(data.all_history);
+        } catch (err) {
+            console.error("データ取得エラー:", err);
+        }
     };
 
     useEffect(() => {
         fetchAllData();
     }, []);
 
-    const handleDeleteUser = (userId) => {
+    const handleDeleteUser = async (userId) => {
         if (window.confirm('【管理者権限】\n本当にこのユーザーを削除しますか？\n（貸出中の備品は強制返却されます）')) {
-            fetch(`https://asa-app-ayato.onrender.com/api/delete_user/${userId}`, { method: 'POST', credentials: 'include' })
-            .then(res => res.json())
-            .then(data => {
+            try {
+                const data = await api.deleteUser(userId);
                 alert(data.message);
-                if (data.status === 'success') fetchAllData();
-            });
+                if (data.status === 'success') {
+                    fetchAllData();
+                }
+            } catch (err) {
+                console.error("削除エラー:", err);
+                alert("削除に失敗しました");
+            }
         }
     };
 
